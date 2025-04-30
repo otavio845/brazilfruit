@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tropical Fruit Tycoon - Brazil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0fdf4;
+            background-image: url('https://images.unsplash.com/photo-1518631082744-0a2bede842b0?q=80&w=1470&auto=format&fit=crop');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            color: #1f2937;
+        }
+        
+        .game-container {
+            backdrop-filter: blur(8px);
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .fruit-card {
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        
+        .fruit-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .tropical-gradient {
+            background: linear-gradient(135deg, #f59e0b, #10b981, #3b82f6);
+            background-size: 200% 200%;
+            animation: gradient 8s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .locked-fruit {
+            filter: grayscale(80%);
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            border-radius: 0.75rem;
+        }
+        
+        .new-fruit-notification {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 9999px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Password modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .error-message {
+            color: #ef4444;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .success-message {
+            color: #10b981;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .upgrade-level {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="text-center mb-6">
+                <div class="tropical-gradient p-3 rounded-full text-white inline-block">
+                    <i class="fas fa-pineapple fa-2x"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-green-800 mt-4">Tropical Fruit Tycoon</h2>
+                <p class="text-gray-600">Enter access code to play</p>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password-input" class="block text-sm font-medium text-gray-700 mb-1">Access Code</label>
+                <input type="password" id="password-input" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                <p id="password-error" class="error-message hidden">Invalid access code. Please try again.</p>
+                <p id="password-success" class="success-message hidden">Access granted! Loading game...</p>
+            </div>
+            
+            <button id="submit-password" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition">
+                Unlock Game
+            </button>
+            
+            <p class="text-sm text-gray-500 mt-4 text-center">
+                Need an access code? Contact the game owner.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Game Container (hidden until password is entered) -->
+    <div id="game-container" class="hidden flex-1 max-w-6xl mx-auto p-4 md:p-6 my-8 rounded-xl shadow-xl w-full">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="tropical-gradient p-3 rounded-full text-white">
+                    <i class="fas fa-pineapple fa-2x"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-green-800">Tropical Fruit Tycoon</h1>
+                    <p class="text-sm text-gray-600">Brazilian Fruit Empire</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+                <div class="bg-white p-3 rounded-lg shadow-md flex items-center gap-3">
+                    <div class="bg-yellow-100 p-2 rounded-full">
+                        <i class="fas fa-coins text-yellow-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Balance</p>
+                        <p id="money" class="font-bold text-lg">R$ 100</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-3 rounded-lg shadow-md flex items-center gap-3">
+                    <div class="bg-green-100 p-2 rounded-full">
+                        <i class="fas fa-chart-line text-green-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Reputation</p>
+                        <div class="flex items-center gap-1">
+                            <div class="progress-bar w-20">
+                                <div id="reputation-bar" class="progress-fill bg-green-500" style="width: 30%"></div>
+                            </div>
+                            <span id="reputation" class="text-sm font-medium">30%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Game Area -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column - Farm Management -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-green-800">Your Tropical Farms</h2>
+                    <button id="hire-manager" class="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition disabled:opacity-50" disabled>
+                        <i class="fas fa-user-tie mr-2"></i>Hire Manager (R$ 500)
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Starter Farms -->
+                    <div class="fruit-card bg-yellow-50 border-2 border-yellow-100 rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-yellow-800">Açaí Palm Farm</h3>
+                                <p class="text-sm text-yellow-600">Amazon Region</p>
+                            </div>
+                            <div class="bg-yellow-100 p-2 rounded-lg">
+                                <i class="fas fa-tree text-yellow-600"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span id="acai-stock">0 units</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="acai-progress" class="progress-fill bg-yellow-400" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium">R$ <span id="acai-value">5</span>/unit</p>
+                            </div>
+                            <button id="harvest-acai" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Harvest
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card bg-orange-50 border-2 border-orange-100 rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-orange-800">Mango Orchard</h3>
+                                <p class="text-sm text-orange-600">Northeast Brazil</p>
+                            </div>
+                            <div class="bg-orange-100 p-2 rounded-lg">
+                                <i class="fas fa-apple-alt text-orange-600"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span id="mango-stock">0 units</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="mango-progress" class="progress-fill bg-orange-400" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium">R$ <span id="mango-value">8</span>/unit</p>
+                            </div>
+                            <button id="harvest-mango" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Harvest
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card bg-purple-50 border-2 border-purple-100 rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-purple-800">Cupuaçu Plantation</h3>
+                                <p class="text-sm text-purple-600">Pará State</p>
+                            </div>
+                            <div class="bg-purple-100 p-2 rounded-lg">
+                                <i class="fas fa-seedling text-purple-600"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span id="cupuacu-stock">0 units</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="cupuacu-progress" class="progress-fill bg-purple-400" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium">R$ <span id="cupuacu-value">10</span>/unit</p>
+                            </div>
+                            <button id="harvest-cupuacu" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Harvest
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Locked Farms -->
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 1,000</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Guava Grove</h3>
+                                <p class="text-sm text-gray-500">São Paulo State</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-leaf text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 15/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 2,500</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Pineapple Field</h3>
+                                <p class="text-sm text-gray-500">Bahia State</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-pineapple text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 20/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 5,000</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Passionfruit Vineyard</h3>
+                                <p class="text-sm text-gray-500">Minas Gerais</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-vine text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 30/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 7,500</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Jabuticaba Orchard</h3>
+                                <p class="text-sm text-gray-500">São Paulo State</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-wine-bottle text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 40/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 10,000</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Caju Plantation</h3>
+                                <p class="text-sm text-gray-500">Northeast Brazil</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-apple-alt text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 50/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 15,000</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Graviola Farm</h3>
+                                <p class="text-sm text-gray-500">Amazon Region</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-spa text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 70/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="fruit-card locked-fruit bg-gray-50 border-2 border-gray-100 rounded-xl p-4">
+                        <div class="locked-overlay">
+                            <div class="bg-gray-600 p-2 rounded-full mb-2">
+                                <i class="fas fa-lock text-white"></i>
+                            </div>
+                            <p class="text-sm font-medium">Unlock at R$ 20,000</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-600">Pitanga Grove</h3>
+                                <p class="text-sm text-gray-500">Coastal Brazil</p>
+                            </div>
+                            <div class="bg-gray-100 p-2 rounded-lg">
+                                <i class="fas fa-berry text-gray-500"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Production</span>
+                                <span>Locked</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-gray-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-gray-500">Value</p>
+                                <p class="font-medium text-gray-400">R$ 100/unit</p>
+                            </div>
+                            <button class="bg-gray-300 text-gray-500 px-3 py-1 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Locked
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Market & Upgrades -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold text-green-800 mb-6">Market & Upgrades</h2>
+                
+                <div class="mb-8">
+                    <h3 class="font-medium text-gray-700 mb-3">Sell Your Harvest</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-yellow-50 p-3 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="bg-yellow-100 p-2 rounded-full">
+                                    <i class="fas fa-tree text-yellow-600"></i>
+                                </div>
+                                <span>Açaí</span>
+                            </div>
+                            <button id="sell-acai" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Sell All
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-orange-50 p-3 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="bg-orange-100 p-2 rounded-full">
+                                    <i class="fas fa-apple-alt text-orange-600"></i>
+                                </div>
+                                <span>Mango</span>
+                            </div>
+                            <button id="sell-mango" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Sell All
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-purple-50 p-3 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="bg-purple-100 p-2 rounded-full">
+                                    <i class="fas fa-seedling text-purple-600"></i>
+                                </div>
+                                <span>Cupuaçu</span>
+                            </div>
+                            <button id="sell-cupuacu" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Sell All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="font-medium text-gray-700 mb-3">Farm Upgrades</h3>
+                    <div class="space-y-3">
+                        <div class="bg-blue-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Açaí Production Boost</h4>
+                                <span class="text-sm bg-blue-100 text-blue-600 px-2 py-1 rounded">R$ <span id="acai-speed-cost">200</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Increases production speed by <span id="acai-speed-boost">10</span>%</p>
+                            <div class="upgrade-level">Level: <span id="acai-speed-level">0</span></div>
+                            <button id="upgrade-acai-speed" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Upgrade
+                            </button>
+                        </div>
+                        
+                        <div class="bg-green-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Mango Quality</h4>
+                                <span class="text-sm bg-green-100 text-green-600 px-2 py-1 rounded">R$ <span id="mango-value-cost">300</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Increases mango value by R$ <span id="mango-value-boost">2</span>/unit</p>
+                            <div class="upgrade-level">Level: <span id="mango-value-level">0</span></div>
+                            <button id="upgrade-mango-value" class="w-full bg-green-500 hover:bg-green-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Upgrade
+                            </button>
+                        </div>
+                        
+                        <div class="bg-purple-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Cupuaçu Expansion</h4>
+                                <span class="text-sm bg-purple-100 text-purple-600 px-2 py-1 rounded">R$ <span id="cupuacu-capacity-cost">400</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Increases maximum production by <span id="cupuacu-capacity-boost">50</span>%</p>
+                            <div class="upgrade-level">Level: <span id="cupuacu-capacity-level">0</span></div>
+                            <button id="upgrade-cupuacu-capacity" class="w-full bg-purple-500 hover:bg-purple-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Upgrade
+                            </button>
+                        </div>
+                        
+                        <div class="bg-red-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Guava Irrigation</h4>
+                                <span class="text-sm bg-red-100 text-red-600 px-2 py-1 rounded">R$ <span id="guava-unlock-cost">1000</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Unlocks Guava Grove (requires R$ 1,000)</p>
+                            <button id="unlock-guava" class="w-full bg-red-500 hover:bg-red-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Unlock
+                            </button>
+                        </div>
+                        
+                        <div class="bg-yellow-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Pineapple Fertilizer</h4>
+                                <span class="text-sm bg-yellow-100 text-yellow-600 px-2 py-1 rounded">R$ <span id="pineapple-unlock-cost">2500</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Unlocks Pineapple Field (requires R$ 2,500)</p>
+                            <button id="unlock-pineapple" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Unlock
+                            </button>
+                        </div>
+                        
+                        <div class="bg-indigo-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Passionfruit Research</h4>
+                                <span class="text-sm bg-indigo-100 text-indigo-600 px-2 py-1 rounded">R$ <span id="passionfruit-unlock-cost">5000</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Unlocks Passionfruit Vineyard (requires R$ 5,000)</p>
+                            <button id="unlock-passionfruit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Unlock
+                            </button>
+                        </div>
+                        
+                        <div class="bg-pink-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Global Price Increase</h4>
+                                <span class="text-sm bg-pink-100 text-pink-600 px-2 py-1 rounded">R$ <span id="global-price-cost">1000</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Increases all fruit values by <span id="global-price-boost">5</span>%</p>
+                            <div class="upgrade-level">Level: <span id="global-price-level">0</span></div>
+                            <button id="upgrade-global-price" class="w-full bg-pink-500 hover:bg-pink-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Upgrade
+                            </button>
+                        </div>
+                        
+                        <div class="bg-teal-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-medium">Production Efficiency</h4>
+                                <span class="text-sm bg-teal-100 text-teal-600 px-2 py-1 rounded">R$ <span id="efficiency-cost">1500</span></span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-2">Increases all production rates by <span id="efficiency-boost">8</span>%</p>
+                            <div class="upgrade-level">Level: <span id="efficiency-level">0</span></div>
+                            <button id="upgrade-efficiency" class="w-full bg-teal-500 hover:bg-teal-600 text-white py-1 rounded-lg text-sm font-medium transition disabled:opacity-50" disabled>
+                                Upgrade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Game Stats -->
+        <div class="mt-8 bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold text-green-800 mb-4">Fruit Empire Stats</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <p class="text-xs text-gray-500">Total Harvested</p>
+                    <p id="total-harvested" class="font-bold text-lg">0 units</p>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <p class="text-xs text-gray-500">Total Sold</p>
+                    <p id="total-sold" class="font-bold text-lg">R$ 0</p>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <p class="text-xs text-gray-500">Time Played</p>
+                    <p id="time-played" class="font-bold text-lg">0:00</p>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <p class="text-xs text-gray-500">Farms Owned</p>
+                    <p id="farms-owned" class="font-bold text-lg">3</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Password Protection
+    document.addEventListener('DOMContentLoaded', function() {
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const submitPassword = document.getElementById('submit-password');
+        const passwordError = document.getElementById('password-error');
+        const passwordSuccess = document.getElementById('password-success');
+        const gameContainer = document.getElementById('game-container');
+        
+        // Correct password
+        const correctPassword = '0854';
+        
+        submitPassword.addEventListener('click', function() {
+            const enteredPassword = passwordInput.value;
+            
+            if (enteredPassword === correctPassword) {
+                // Correct password
+                passwordError.classList.add('hidden');
+                passwordSuccess.classList.remove('hidden');
+                submitPassword.disabled = true;
+                submitPassword.textContent = 'Success!';
+                submitPassword.classList.remove('bg-green-600', 'hover:bg-green-700');
+                submitPassword.classList.add('bg-green-500');
+                
+                // Hide modal and show game after short delay
+                setTimeout(function() {
+                    passwordModal.style.display = 'none';
+                    gameContainer.classList.remove('hidden');
+                    startGame();
+                }, 1000);
+            } else {
+                // Wrong password
+                passwordError.classList.remove('hidden');
+                passwordInput.classList.add('border-red-500');
+                passwordInput.classList.remove('border-gray-300');
+                passwordInput.value = '';
+                
+                // Shake animation for error
+                passwordModal.querySelector('.modal-content').classList.add('shake');
+                setTimeout(function() {
+                    passwordModal.querySelector('.modal-content').classList.remove('shake');
+                }, 500);
+            }
+        });
+        
+        // Allow pressing Enter to submit password
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitPassword.click();
+            }
+        });
+        
+        // Game variables
+        let money = 100;
+        let reputation = 30;
+        let gameTime = 0;
+        let totalHarvested = 0;
+        let totalSold = 0;
+        
+        // Farm data
+        const farms = {
+            acai: {
+                stock: 0,
+                progress: 0,
+                baseValue: 5,
+                value: 5,
+                baseProductionRate: 0.5,
+                productionRate: 0.5,
+                baseMaxProduction: 20,
+                maxProduction: 20,
+                unlocked: true
+            },
+            mango: {
+                stock: 0,
+                progress: 0,
+                baseValue: 8,
+                value: 8,
+                baseProductionRate: 0.3,
+                productionRate: 0.3,
+                baseMaxProduction: 15,
+                maxProduction: 15,
+                unlocked: true
+            },
+            cupuacu: {
+                stock: 0,
+                progress: 0,
+                baseValue: 10,
+                value: 10,
+                baseProductionRate: 0.2,
+                productionRate: 0.2,
+                baseMaxProduction: 10,
+                maxProduction: 10,
+                unlocked: true
+            },
+            guava: {
+                stock: 0,
+                progress: 0,
+                baseValue: 15,
+                value: 15,
+                baseProductionRate: 0.15,
+                productionRate: 0.15,
+                baseMaxProduction: 8,
+                maxProduction: 8,
+                unlocked: false
+            },
+            pineapple: {
+                stock: 0,
+                progress: 0,
+                baseValue: 20,
+                value: 20,
+                baseProductionRate: 0.1,
+                productionRate: 0.1,
+                baseMaxProduction: 6,
+                maxProduction: 6,
+                unlocked: false
+            },
+            passionfruit: {
+                stock: 0,
+                progress: 0,
+                baseValue: 30,
+                value: 30,
+                baseProductionRate: 0.08,
+                productionRate: 0.08,
+                baseMaxProduction: 4,
+                maxProduction: 4,
+                unlocked: false
+            },
+            jabuticaba: {
+                stock: 0,
+                progress: 0,
+                baseValue: 40,
+                value: 40,
+                baseProductionRate: 0.06,
+                productionRate: 0.06,
+                baseMaxProduction: 3,
+                maxProduction: 3,
+                unlocked: false
+            },
+            caju: {
+                stock: 0,
+                progress: 0,
+                baseValue: 50,
+                value: 50,
+                baseProductionRate: 0.05,
+                productionRate: 0.05,
+                baseMaxProduction: 3,
+                maxProduction: 3,
+                unlocked: false
+            },
+            graviola: {
+                stock: 0,
+                progress: 0,
+                baseValue: 70,
+                value: 70,
+                baseProductionRate: 0.04,
+                productionRate: 0.04,
+                baseMaxProduction: 2,
+                maxProduction: 2,
+                unlocked: false
+            },
+            pitanga: {
+                stock: 0,
+                progress: 0,
+                baseValue: 100,
+                value: 100,
+                baseProductionRate: 0.03,
+                productionRate: 0.03,
+                baseMaxProduction: 2,
+                maxProduction: 2,
+                unlocked: false
+            }
+        };
+        
+        // Upgrade data
+        const upgrades = {
+            acaiSpeed: {
+                level: 0,
+                baseCost: 200,
+                cost: 200,
+                boost: 10, // percentage
+                maxLevel: 20
+            },
+            mangoValue: {
+                level: 0,
+                baseCost: 300,
+                cost: 300,
+                boost: 2, // fixed amount
+                maxLevel: 20
+            },
+            cupuacuCapacity: {
+                level: 0,
+                baseCost: 400,
+                cost: 400,
+                boost: 50, // percentage
+                maxLevel: 10
+            },
+            globalPrice: {
+                level: 0,
+                baseCost: 1000,
+                cost: 1000,
+                boost: 5, // percentage
+                maxLevel: 10
+            },
+            efficiency: {
+                level: 0,
+                baseCost: 1500,
+                cost: 1500,
+                boost: 8, // percentage
+                maxLevel: 10
+            }
+        };
+        
+        // Unlock costs
+        const unlockCosts = {
+            guava: 1000,
+            pineapple: 2500,
+            passionfruit: 5000,
+            jabuticaba: 7500,
+            caju: 10000,
+            graviola: 15000,
+            pitanga: 20000
+        };
+        
+        // Game elements
+        const moneyElement = document.getElementById('money');
+        const reputationElement = document.getElementById('reputation');
+        const reputationBar = document.getElementById('reputation-bar');
+        const timePlayedElement = document.getElementById('time-played');
+        const totalHarvestedElement = document.getElementById('total-harvested');
+        const totalSoldElement = document.getElementById('total-sold');
+        const farmsOwnedElement = document.getElementById('farms-owned');
+        
+        // Farm elements
+        const acaiStockElement = document.getElementById('acai-stock');
+        const acaiProgressElement = document.getElementById('acai-progress');
+        const acaiValueElement = document.getElementById('acai-value');
+        const mangoStockElement = document.getElementById('mango-stock');
+        const mangoProgressElement = document.getElementById('mango-progress');
+        const mangoValueElement = document.getElementById('mango-value');
+        const cupuacuStockElement = document.getElementById('cupuacu-stock');
+        const cupuacuProgressElement = document.getElementById('cupuacu-progress');
+        const cupuacuValueElement = document.getElementById('cupuacu-value');
+        
+        // Upgrade elements
+        const acaiSpeedCostElement = document.getElementById('acai-speed-cost');
+        const acaiSpeedBoostElement = document.getElementById('acai-speed-boost');
+        const acaiSpeedLevelElement = document.getElementById('acai-speed-level');
+        const mangoValueCostElement = document.getElementById('mango-value-cost');
+        const mangoValueBoostElement = document.getElementById('mango-value-boost');
+        const mangoValueLevelElement = document.getElementById('mango-value-level');
+        const cupuacuCapacityCostElement = document.getElementById('cupuacu-capacity-cost');
+        const cupuacuCapacityBoostElement = document.getElementById('cupuacu-capacity-boost');
+        const cupuacuCapacityLevelElement = document.getElementById('cupuacu-capacity-level');
+        const globalPriceCostElement = document.getElementById('global-price-cost');
+        const globalPriceBoostElement = document.getElementById('global-price-boost');
+        const globalPriceLevelElement = document.getElementById('global-price-level');
+        const efficiencyCostElement = document.getElementById('efficiency-cost');
+        const efficiencyBoostElement = document.getElementById('efficiency-boost');
+        const efficiencyLevelElement = document.getElementById('efficiency-level');
+        
+        // Buttons
+        const harvestAcaiButton = document.getElementById('harvest-acai');
+        const harvestMangoButton = document.getElementById('harvest-mango');
+        const harvestCupuacuButton = document.getElementById('harvest-cupuacu');
+        const sellAcaiButton = document.getElementById('sell-acai');
+        const sellMangoButton = document.getElementById('sell-mango');
+        const sellCupuacuButton = document.getElementById('sell-cupuacu');
+        const upgradeAcaiSpeedButton = document.getElementById('upgrade-acai-speed');
+        const upgradeMangoValueButton = document.getElementById('upgrade-mango-value');
+        const upgradeCupuacuCapacityButton = document.getElementById('upgrade-cupuacu-capacity');
+        const upgradeGlobalPriceButton = document.getElementById('upgrade-global-price');
+        const upgradeEfficiencyButton = document.getElementById('upgrade-efficiency');
+        const hireManagerButton = document.getElementById('hire-manager');
+        const unlockGuavaButton = document.getElementById('unlock-guava');
+        const unlockPineappleButton = document.getElementById('unlock-pineapple');
+        const unlockPassionfruitButton = document.getElementById('unlock-passionfruit');
+        
+        // Game functions
+        function startGame() {
+            // Enable initial buttons
+            harvestAcaiButton.disabled = false;
+            harvestMangoButton.disabled = false;
+            harvestCupuacuButton.disabled = false;
+            sellAcaiButton.disabled = false;
+            sellMangoButton.disabled = false;
+            sellCupuacuButton.disabled = false;
+            upgradeAcaiSpeedButton.disabled = false;
+            upgradeMangoValueButton.disabled = false;
+            upgradeCupuacuCapacityButton.disabled = false;
+            upgradeGlobalPriceButton.disabled = false;
+            upgradeEfficiencyButton.disabled = false;
+            
+            // Update unlock buttons
+            updateUnlockButtons();
+            
+            // Start game timer
+            setInterval(updateGameTime, 1000);
+            
+            // Start production
+            setInterval(updateProduction, 100);
+        }
+        
+        function updateGameTime() {
+            gameTime++;
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = gameTime % 60;
+            timePlayedElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function updateProduction() {
+            // Update each farm's production
+            for (const farm in farms) {
+                if (!farms[farm].unlocked) continue;
+                
+                if (farms[farm].stock < farms[farm].maxProduction) {
+                    farms[farm].progress += farms[farm].productionRate;
+                    
+                    if (farms[farm].progress >= 100) {
+                        farms[farm].stock++;
+                        farms[farm].progress = 0;
+                        totalHarvested++;
+                        totalHarvestedElement.textContent = `${totalHarvested} units`;
+                        
+                        // Update UI
+                        updateFarmUI(farm);
+                        
+                        // Check if we can sell
+                        updateSellButtons();
+                    }
+                }
+                
+                // Update progress bars for unlocked farms
+                if (farm === 'acai') {
+                    acaiProgressElement.style.width = `${farms.acai.progress}%`;
+                } else if (farm === 'mango') {
+                    mangoProgressElement.style.width = `${farms.mango.progress}%`;
+                } else if (farm === 'cupuacu') {
+                    cupuacuProgressElement.style.width = `${farms.cupuacu.progress}%`;
+                }
+            }
+        }
+        
+        function updateFarmUI(farm) {
+            const farmData = farms[farm];
+            
+            switch(farm) {
+                case 'acai':
+                    acaiStockElement.textContent = `${farmData.stock} units`;
+                    acaiValueElement.textContent = farmData.value.toFixed(2);
+                    break;
+                case 'mango':
+                    mangoStockElement.textContent = `${farmData.stock} units`;
+                    mangoValueElement.textContent = farmData.value.toFixed(2);
+                    break;
+                case 'cupuacu':
+                    cupuacuStockElement.textContent = `${farmData.stock} units`;
+                    cupuacuValueElement.textContent = farmData.value.toFixed(2);
+                    break;
+            }
+        }
+        
+        function updateSellButtons() {
+            sellAcaiButton.disabled = farms.acai.stock <= 0;
+            sellMangoButton.disabled = farms.mango.stock <= 0;
+            sellCupuacuButton.disabled = farms.cupuacu.stock <= 0;
+        }
+        
+        function updateMoney(amount) {
+            money += amount;
+            moneyElement.textContent = `R$ ${money.toFixed(2)}`;
+            
+            // Check if we can hire a manager now
+            hireManagerButton.disabled = money < 500;
+            
+            // Check if we can unlock new farms
+            updateUnlockButtons();
+            
+            // Check if we can afford upgrades
+            updateUpgradeButtons();
+        }
+        
+        function updateUnlockButtons() {
+            unlockGuavaButton.disabled = money < unlockCosts.guava;
+            unlockPineappleButton.disabled = money < unlockCosts.pineapple;
+            unlockPassionfruitButton.disabled = money < unlockCosts.passionfruit;
+        }
+        
+        function updateUpgradeButtons() {
+            upgradeAcaiSpeedButton.disabled = money < upgrades.acaiSpeed.cost || upgrades.acaiSpeed.level >= upgrades.acaiSpeed.maxLevel;
+            upgradeMangoValueButton.disabled = money < upgrades.mangoValue.cost || upgrades.mangoValue.level >= upgrades.mangoValue.maxLevel;
+            upgradeCupuacuCapacityButton.disabled = money < upgrades.cupuacuCapacity.cost || upgrades.cupuacuCapacity.level >= upgrades.cupuacuCapacity.maxLevel;
+            upgradeGlobalPriceButton.disabled = money < upgrades.globalPrice.cost || upgrades.globalPrice.level >= upgrades.globalPrice.maxLevel;
+            upgradeEfficiencyButton.disabled = money < upgrades.efficiency.cost || upgrades.efficiency.level >= upgrades.efficiency.maxLevel;
+        }
+        
+        function updateReputation(amount) {
+            reputation = Math.min(100, Math.max(0, reputation + amount));
+            reputationElement.textContent = `${reputation}%`;
+            reputationBar.style.width = `${reputation}%`;
+        }
+        
+        function unlockFarm(farm) {
+            farms[farm].unlocked = true;
+            
+            // Update farms owned count
+            let ownedCount = 0;
+            for (const f in farms) {
+                if (farms[f].unlocked) ownedCount++;
+            }
+            farmsOwnedElement.textContent = ownedCount;
+            
+            // Find and update the farm card
+            const farmCards = document.querySelectorAll('.fruit-card.locked-fruit');
+            farmCards.forEach(card => {
+                const title = card.querySelector('h3').textContent;
+                const farmNames = {
+                    'Guava Grove': 'guava',
+                    'Pineapple Field': 'pineapple',
+                    'Passionfruit Vineyard': 'passionfruit',
+                    'Jabuticaba Orchard': 'jabuticaba',
+                    'Caju Plantation': 'caju',
+                    'Graviola Farm': 'graviola',
+                    'Pitanga Grove': 'pitanga'
+                };
+                
+                if (farmNames[title] === farm) {
+                    // Remove locked state
+                    card.classList.remove('locked-fruit');
+                    const overlay = card.querySelector('.locked-overlay');
+                    if (overlay) overlay.remove();
+                    
+                    // Enable buttons and update appearance
+                    const button = card.querySelector('button');
+                    button.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                    button.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white');
+                    button.textContent = 'Harvest';
+                    button.disabled = false;
+                    
+                    // Update text colors
+                    card.querySelector('h3').classList.remove('text-gray-600');
+                    card.querySelector('h3').classList.add('text-green-800');
+                    card.querySelector('p').classList.remove('text-gray-500');
+                    card.querySelector('p').classList.add('text-green-600');
+                    card.querySelector('.font-medium').classList.remove('text-gray-400');
+                    
+                    // Add pulse animation to highlight new farm
+                    card.classList.add('pulse');
+                    setTimeout(() => card.classList.remove('pulse'), 3000);
+                }
+            });
+        }
+        
+        function applyGlobalPriceIncrease() {
+            for (const farm in farms) {
+                if (farms[farm].unlocked) {
+                    const boost = 1 + (upgrades.globalPrice.level * upgrades.globalPrice.boost / 100);
+                    farms[farm].value = farms[farm].baseValue * boost;
+                    updateFarmUI(farm);
+                }
+            }
+        }
+        
+        function applyEfficiencyBoost() {
+            for (const farm in farms) {
+                if (farms[farm].unlocked) {
+                    const boost = 1 + (upgrades.efficiency.level * upgrades.efficiency.boost / 100);
+                    farms[farm].productionRate = farms[farm].baseProductionRate * boost;
+                }
+            }
+        }
+        
+        // Event listeners for buttons
+        harvestAcaiButton.addEventListener('click', function() {
+            if (farms.acai.stock > 0) {
+                farms.acai.stock--;
+                updateFarmUI('acai');
+                updateSellButtons();
+            }
+        });
+        
+        harvestMangoButton.addEventListener('click', function() {
+            if (farms.mango.stock > 0) {
+                farms.mango.stock--;
+                updateFarmUI('mango');
+                updateSellButtons();
+            }
+        });
+        
+        harvestCupuacuButton.addEventListener('click', function() {
+            if (farms.cupuacu.stock > 0) {
+                farms.cupuacu.stock--;
+                updateFarmUI('cupuacu');
+                updateSellButtons();
+            }
+        });
+        
+        sellAcaiButton.addEventListener('click', function() {
+            const amount = farms.acai.stock * farms.acai.value;
+            totalSold += amount;
+            totalSoldElement.textContent = `R$ ${totalSold.toFixed(2)}`;
+            
+            updateMoney(amount);
+            farms.acai.stock = 0;
+            updateFarmUI('acai');
+            updateSellButtons();
+            
+            // Small reputation boost for selling
+            updateReputation(1);
+        });
+        
+        sellMangoButton.addEventListener('click', function() {
+            const amount = farms.mango.stock * farms.mango.value;
+            totalSold += amount;
+            totalSoldElement.textContent = `R$ ${totalSold.toFixed(2)}`;
+            
+            updateMoney(amount);
+            farms.mango.stock = 0;
+            updateFarmUI('mango');
+            updateSellButtons();
+            
+            // Small reputation boost for selling
+            updateReputation(1);
+        });
+        
+        sellCupuacuButton.addEventListener('click', function() {
+            const amount = farms.cupuacu.stock * farms.cupuacu.value;
+            totalSold += amount;
+            totalSoldElement.textContent = `R$ ${totalSold.toFixed(2)}`;
+            
+            updateMoney(amount);
+            farms.cupuacu.stock = 0;
+            updateFarmUI('cupuacu');
+            updateSellButtons();
+            
+            // Small reputation boost for selling
+            updateReputation(1);
+        });
+        
+        upgradeAcaiSpeedButton.addEventListener('click', function() {
+            if (money >= upgrades.acaiSpeed.cost && upgrades.acaiSpeed.level < upgrades.acaiSpeed.maxLevel) {
+                updateMoney(-upgrades.acaiSpeed.cost);
+                
+                // Apply upgrade
+                upgrades.acaiSpeed.level++;
+                farms.acai.productionRate = farms.acai.baseProductionRate * (1 + (upgrades.acaiSpeed.level * upgrades.acaiSpeed.boost / 100));
+                
+                // Update cost for next level
+                upgrades.acaiSpeed.cost = Math.floor(upgrades.acaiSpeed.baseCost * Math.pow(1.2, upgrades.acaiSpeed.level));
+                
+                // Update UI
+                acaiSpeedLevelElement.textContent = upgrades.acaiSpeed.level;
+                acaiSpeedCostElement.textContent = upgrades.acaiSpeed.cost;
+                acaiSpeedBoostElement.textContent = upgrades.acaiSpeed.boost;
+                
+                // Check if max level reached
+                if (upgrades.acaiSpeed.level >= upgrades.acaiSpeed.maxLevel) {
+                    upgradeAcaiSpeedButton.disabled = true;
+                    upgradeAcaiSpeedButton.textContent = 'Max Level';
+                }
+                
+                // Small reputation boost for upgrading
+                updateReputation(2);
+            }
+        });
+        
+        upgradeMangoValueButton.addEventListener('click', function() {
+            if (money >= upgrades.mangoValue.cost && upgrades.mangoValue.level < upgrades.mangoValue.maxLevel) {
+                updateMoney(-upgrades.mangoValue.cost);
+                
+                // Apply upgrade
+                upgrades.mangoValue.level++;
+                farms.mango.value = farms.mango.baseValue + (upgrades.mangoValue.level * upgrades.mangoValue.boost);
+                
+                // Update cost for next level
+                upgrades.mangoValue.cost = Math.floor(upgrades.mangoValue.baseCost * Math.pow(1.25, upgrades.mangoValue.level));
+                
+                // Update UI
+                mangoValueLevelElement.textContent = upgrades.mangoValue.level;
+                mangoValueCostElement.textContent = upgrades.mangoValue.cost;
+                mangoValueBoostElement.textContent = upgrades.mangoValue.boost;
+                updateFarmUI('mango');
+                
+                // Check if max level reached
+                if (upgrades.mangoValue.level >= upgrades.mangoValue.maxLevel) {
+                    upgradeMangoValueButton.disabled = true;
+                    upgradeMangoValueButton.textContent = 'Max Level';
+                }
+                
+                // Small reputation boost for upgrading
+                updateReputation(2);
+            }
+        });
+        
+        upgradeCupuacuCapacityButton.addEventListener('click', function() {
+            if (money >= upgrades.cupuacuCapacity.cost && upgrades.cupuacuCapacity.level < upgrades.cupuacuCapacity.maxLevel) {
+                updateMoney(-upgrades.cupuacuCapacity.cost);
+                
+                // Apply upgrade
+                upgrades.cupuacuCapacity.level++;
+                farms.cupuacu.maxProduction = Math.floor(farms.cupuacu.baseMaxProduction * (1 + (upgrades.cupuacuCapacity.level * upgrades.cupuacuCapacity.boost / 100)));
+                
+                // Update cost for next level
+                upgrades.cupuacuCapacity.cost = Math.floor(upgrades.cupuacuCapacity.baseCost * Math.pow(1.3, upgrades.cupuacuCapacity.level));
+                
+                // Update UI
+                cupuacuCapacityLevelElement.textContent = upgrades.cupuacuCapacity.level;
+                cupuacuCapacityCostElement.textContent = upgrades.cupuacuCapacity.cost;
+                cupuacuCapacityBoostElement.textContent = upgrades.cupuacuCapacity.boost;
+                
+                // Check if max level reached
+                if (upgrades.cupuacuCapacity.level >= upgrades.cupuacuCapacity.maxLevel) {
+                    upgradeCupuacuCapacityButton.disabled = true;
+                    upgradeCupuacuCapacityButton.textContent = 'Max Level';
+                }
+                
+                // Small reputation boost for upgrading
+                updateReputation(2);
+            }
+        });
+        
+        upgradeGlobalPriceButton.addEventListener('click', function() {
+            if (money >= upgrades.globalPrice.cost && upgrades.globalPrice.level < upgrades.globalPrice.maxLevel) {
+                updateMoney(-upgrades.globalPrice.cost);
+                
+                // Apply upgrade
+                upgrades.globalPrice.level++;
+                applyGlobalPriceIncrease();
+                
+                // Update cost for next level
+                upgrades.globalPrice.cost = Math.floor(upgrades.globalPrice.baseCost * Math.pow(1.5, upgrades.globalPrice.level));
+                
+                // Update UI
+                globalPriceLevelElement.textContent = upgrades.globalPrice.level;
+                globalPriceCostElement.textContent = upgrades.globalPrice.cost;
+                globalPriceBoostElement.textContent = upgrades.globalPrice.boost;
+                
+                // Check if max level reached
+                if (upgrades.globalPrice.level >= upgrades.globalPrice.maxLevel) {
+                    upgradeGlobalPriceButton.disabled = true;
+                    upgradeGlobalPriceButton.textContent = 'Max Level';
+                }
+                
+                // Small reputation boost for upgrading
+                updateReputation(3);
+            }
+        });
+        
+        upgradeEfficiencyButton.addEventListener('click', function() {
+            if (money >= upgrades.efficiency.cost && upgrades.efficiency.level < upgrades.efficiency.maxLevel) {
+                updateMoney(-upgrades.efficiency.cost);
+                
+                // Apply upgrade
+                upgrades.efficiency.level++;
+                applyEfficiencyBoost();
+                
+                // Update cost for next level
+                upgrades.efficiency.cost = Math.floor(upgrades.efficiency.baseCost * Math.pow(1.6, upgrades.efficiency.level));
+                
+                // Update UI
+                efficiencyLevelElement.textContent = upgrades.efficiency.level;
+                efficiencyCostElement.textContent = upgrades.efficiency.cost;
+                efficiencyBoostElement.textContent = upgrades.efficiency.boost;
+                
+                // Check if max level reached
+                if (upgrades.efficiency.level >= upgrades.efficiency.maxLevel) {
+                    upgradeEfficiencyButton.disabled = true;
+                    upgradeEfficiencyButton.textContent = 'Max Level';
+                }
+                
+                // Small reputation boost for upgrading
+                updateReputation(3);
+            }
+        });
+        
+        hireManagerButton.addEventListener('click', function() {
+            if (money >= 500) {
+                updateMoney(-500);
+                
+                // Manager automatically sells all produce every 30 seconds
+                setInterval(function() {
+                    for (const farm in farms) {
+                        if (!farms[farm].unlocked) continue;
+                        
+                        if (farms[farm].stock > 0) {
+                            const amount = farms[farm].stock * farms[farm].value;
+                            totalSold += amount;
+                            totalSoldElement.textContent = `R$ ${totalSold.toFixed(2)}`;
+                            
+                            updateMoney(amount);
+                            farms[farm].stock = 0;
+                            updateFarmUI(farm);
+                            updateSellButtons();
+                            
+                            // Small reputation boost for selling
+                            updateReputation(0.5);
+                        }
+                    }
+                }, 30000);
+                
+                hireManagerButton.textContent = 'Manager Hired!';
+                hireManagerButton.disabled = true;
+                
+                // Reputation boost for hiring manager
+                updateReputation(5);
+            }
+        });
+        
+        unlockGuavaButton.addEventListener('click', function() {
+            if (money >= unlockCosts.guava) {
+                updateMoney(-unlockCosts.guava);
+                unlockFarm('guava');
+                unlockGuavaButton.textContent = 'Unlocked!';
+                unlockGuavaButton.disabled = true;
+                
+                // Reputation boost for expansion
+                updateReputation(5);
+            }
+        });
+        
+        unlockPineappleButton.addEventListener('click', function() {
+            if (money >= unlockCosts.pineapple) {
+                updateMoney(-unlockCosts.pineapple);
+                unlockFarm('pineapple');
+                unlockPineappleButton.textContent = 'Unlocked!';
+                unlockPineappleButton.disabled = true;
+                
+                // Reputation boost for expansion
+                updateReputation(8);
+            }
+        });
+        
+        unlockPassionfruitButton.addEventListener('click', function() {
+            if (money >= unlockCosts.passionfruit) {
+                updateMoney(-unlockCosts.passionfruit);
+                unlockFarm('passionfruit');
+                unlockPassionfruitButton.textContent = 'Unlocked!';
+                unlockPassionfruitButton.disabled = true;
+                
+                // Reputation boost for expansion
+                updateReputation(10);
+            }
+        });
+    });
+    </script>
+</body>
+</html>
